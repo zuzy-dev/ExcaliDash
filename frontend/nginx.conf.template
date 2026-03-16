@@ -4,6 +4,9 @@ events {
 
 http {
     include /etc/nginx/mime.types;
+    types {
+        font/woff2 woff2;
+    }
     default_type application/octet-stream;
 
     # Preserve upstream TLS context (if present) when proxying to backend.
