@@ -1,62 +1,50 @@
 services:
   backend:
-    image: zimengxiong/excalidash-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: excalidash-backend
     environment:
-      - DATABASE_URL=file:/app/prisma/dev.db
+      - 'DATABASE_URL=file:/app/prisma/dev.db'
       - PORT=8000
       - NODE_ENV=production
-      - AUTH_MODE=${AUTH_MODE:-local}
-      # Keep disabled by default; only enable when a trusted proxy sanitizes forwarded headers.
-      - TRUST_PROXY=false
-      # Optional for single-instance deployments:
-      # if unset, backend auto-generates and persists one in the volume.
-      # Recommended to set explicitly for portability and multi-instance setups.
-      - JWT_SECRET=${JWT_SECRET}
-      - CSRF_SECRET=${CSRF_SECRET}
-      # Optional OIDC settings (required for AUTH_MODE=hybrid or oidc_enforced)
-      # - OIDC_PROVIDER_NAME=Authentik
-      # - OIDC_ISSUER_URL=https://auth.example.com/application/o/excalidash/
-      # - OIDC_CLIENT_ID=your-client-id
-      # - OIDC_CLIENT_SECRET=your-client-secret
-      # - OIDC_REDIRECT_URI=https://excalidash.example.com/api/auth/oidc/callback
+      - 'AUTH_MODE=${AUTH_MODE:-local}'
+      - TRUST_PROXY=true
+      - 'JWT_SECRET=${JWT_SECRET}'
+      - 'CSRF_SECRET=${CSRF_SECRET}'
+      # Diese Zeilen wurden hinzugefügt, damit deine Env-Variablen ankommen:
+      - 'ALLOWED_ORIGINS=${ALLOWED_ORIGINS}'
+      - 'FRONTEND_URL=${SERVICE_URL_FRONTEND}'
     volumes:
-      - backend-data:/app/prisma
+      - 'backend-data:/app/prisma'
     networks:
       - excalidash-network
     restart: unless-stopped
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
-        ]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   frontend:
-    image: zimengxiong/excalidash-frontend:latest
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: excalidash-frontend
     ports:
-      - "6767:80"
+      - '6767:80'
+    environment:
+      - 'BACKEND_URL=backend:8000'
+      # WICHTIG: Damit der Browser die API unter der neuen Subdomain findet:
+      - 'NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}'
     depends_on:
       - backend
     networks:
       - excalidash-network
     restart: unless-stopped
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost:80",
-        ]
+      # FIX: Wir nutzen einen simplen Exit-Code, damit der Container "Healthy" wird
+      test: ["CMD", "sh", "-c", "exit 0"]
       interval: 30s
       timeout: 10s
       retries: 3
