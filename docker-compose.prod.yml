@@ -21,10 +21,11 @@ services:
       - excalidash-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s # Wartet 40 Sek. nach dem Start, bevor der erste Check zählt
 
   frontend:
     build:
